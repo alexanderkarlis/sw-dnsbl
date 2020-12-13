@@ -170,7 +170,7 @@ helm install swdnsbl ./helm
 ```
 
 ## TODO's
-- [] Add some role based authentication the more the api grows in complexity
-- [] Right now, the data model only allows for one Domain to be checked (`zen.spamhaus.org`). Update data model to reflect multiple Domains and IP checks
-- [] Add more specific logging
-- [] Add more queries/ mutations for more insight into the problem
+- [ ] Add some role based authentication the more the api grows in complexity
+- [ ] Right now, the data model only allows for one Domain to be checked (`zen.spamhaus.org`). Update data model to reflect multiple Domains and IP checks
+- [ ] Add more specific logging
+- [ ] Add more queries/ mutations for more insight into the problem
