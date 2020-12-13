@@ -1,0 +1,28 @@
+version: "3.3"
+services:
+  db:
+    image: "mysql"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=sw_dnsbl
+      - MYSQL_USER=mysql_admin
+      - MYSQL_PASSWORD=password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    volumes:
+      - ./tmp:/var/lib/mysql
+      - ./scripts/ip/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
+  server:
+    container_name: "sw-dnsbl"
+    build: .
+    environment:
+      - WAIT_HOSTS=db:3306
+    links:
+      - db
+    command: sh -c "/wait && ./build_and_start_server.sh"
+    depends_on: [db]
+    ports:
+      - "8080:8080"

@@ -1,0 +1,95 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+
+"""
+Required Token for running any other queries
+or mutations.
+"""
+type Token {
+  """
+  bearer_token: JWT token
+  """
+  bearer_token: String!
+}
+
+"""
+Data type for authenticating user and being granted a token
+"""
+input UserAuth {
+  """
+  username
+  """
+  username: String!
+  """
+  password
+  """
+  password: String!
+}
+"""
+  Record is the type that is the db schema for ip_details
+
+  @uuid VARCHAR(255) NOT NULL,
+  @created_at VARCHAR(255  ),
+  @updated_at​ VARCHAR(255),
+  @response_code​ VARCHAR(255),
+  @ip_address​ VARCHAR(255)
+
+"""
+type Record {
+    """
+    uuid for each record
+    """
+    uuid: ID!
+
+    """
+    time record was created. Unix time.
+    """
+    created_at: Int!
+
+    """
+    time record was updated. Unix time.
+    """
+    updated_at: Int!
+
+    """
+    response_code is NXDOMAIN is response from `godnsbl.Lookup` is nil, else 
+    the response_code is the returned string.
+    """
+    response_code: String!
+    
+    """
+    ip_address is the IP Address used for searching against the Blocklist domain. Used
+    in `godnsbl.Lookup`.
+    """
+    ip_address: String!
+}
+
+type Mutation {
+  """
+  createToken mutation grants a user a jwt upon successfully signing in.
+  """
+  createToken(data: UserAuth!): Token!
+  """
+  enqueue mutation: @ips -> array of IPv4 addresses.
+  Starts a job to 
+  check against blocklist. Returns true/false if IPs were successfully added 
+  to queue.
+  """
+  enqueue(ips: [String!]!): Boolean
+  """
+  ###################
+  # NOT IMPLEMENTED #
+  ###################
+  setWorkerPoolSize: @size -> Integer sets the worker pool size dynamically 
+  """
+  setWorkerPoolSize(size: Int!): Boolean
+}
+
+type Query {
+  """
+  getIPDetails: @ip -> string of IPv4 address.
+  Returns a Record type
+  """
+  getIPDetails(ip: String!): Record!
+}

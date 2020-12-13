@@ -1,0 +1,6 @@
+language: go
+go_import_path: github.com/alexanderkarlis/sw-dnsbl
+go:
+  - "1.14.x"
+  - "tip"
+script: go test -v ./...
