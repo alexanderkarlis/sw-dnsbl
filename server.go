@@ -51,6 +51,9 @@ func serve(ctx context.Context) (err error) {
 
 	// new db
 	db, err := database.NewDb(config)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	// new consumer
 	consumer := dnsbl.NewConsumer(db, config)

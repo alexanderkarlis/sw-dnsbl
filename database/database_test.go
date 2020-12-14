@@ -2,13 +2,16 @@ package database
 
 import (
 	"log"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/alexanderkarlis/sw-dnsbl/config"
 	"github.com/alexanderkarlis/sw-dnsbl/graph/model"
 )
 
@@ -17,11 +20,70 @@ const (
 )
 
 func TestDb(t *testing.T) {
-	t.Run("new_database_init_success", func(t *testing.T) {
+	os.Setenv("APP_PORT", "8080")
+	os.Setenv("MYSQL_DATABASE_NAME", "sw_dnsbl")
+	os.Setenv("MYSQL_DATABASE_HOST", "0.0.0.0")
+	os.Setenv("MYSQL_DATABASE_PORT", "3306")
+	os.Setenv("MYSQL_USER", "mysql_admin")
+	os.Setenv("MYSQL_PASSWORD", "password")
+	os.Setenv("WORKER_POOL_SIZE", "99")
+	os.Setenv("DNS_BLOCKLIST", "zen.spamhaus.org")
+	os.Setenv("LOG_FILE", "app.log")
+	os.Setenv("PERSIST_DB", "true")
+	os.Setenv("DB_PATH", "./swdnsbl.db")
+
+	// get config and remove db if already there
+	conf := config.GetConfig()
+	os.Remove(conf.DbPath)
+
+	var db *Db
+
+	t.Run("new_database_init/close_success", func(t *testing.T) {
+		db, err = NewDb(conf)
+		if err != nil {
+			t.Errorf("db was not started")
+		}
 		assert.NotEqual(t, nil, db)
+
+		err := db.Close()
+		os.Remove(conf.DbPath)
+		assert.Equal(t, nil, err)
+
 	})
 
+	t.Run("upsert_db_and_query", func(t *testing.T) {
+		db, err = NewDb(conf)
+		assert.NotEqual(t, nil, db)
+		defer os.Remove(conf.DbPath)
+
+		record := model.Record{
+			UUID:         uuid.New().String(),
+			CreatedAt:    int(time.Now().Unix()),
+			UpdatedAt:    int(time.Now().Unix()),
+			ResponseCode: "NXDOMAIN",
+			IPAddress:    "127.0.0.43",
+		}
+		err := db.UpsertRecord(&record)
+		require.Equal(t, nil, err)
+
+		time.Sleep(time.Second / 2)
+
+		r, err := db.QueryRecord("127.0.0.43")
+
+		assert.Equal(t, "127.0.0.43", r.IPAddress)
+		assert.Equal(t, "NXDOMAIN", r.ResponseCode)
+
+		err = db.Close()
+		assert.Equal(t, nil, err)
+
+	})
+}
+
+func TestMySqlDEPRECATED(t *testing.T) {
+	t.Skip()
 	t.Run("test_query_record_ok", func(t *testing.T) {
+		t.Skip()
+
 		db, mock, err := sqlmock.New()
 		if err != nil {
 			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -50,6 +112,7 @@ func TestDb(t *testing.T) {
 	})
 
 	t.Run("test_query_record_bad", func(t *testing.T) {
+		t.Skip()
 		db, mock, err := sqlmock.New()
 		if err != nil {
 			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -77,6 +140,8 @@ func TestDb(t *testing.T) {
 	})
 
 	t.Run("test_upsert", func(t *testing.T) {
+		t.Skip()
+
 		// t.Skip()
 		db, mock, err := sqlmock.New()
 		if err != nil {

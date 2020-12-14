@@ -5,14 +5,14 @@ GraphQL API built in Go to check whether or a not a specific IP address is suspe
 ___
 The three main part of the microservice are as follows:
 
-* MySql Database for data persistance 
+* sqlite3 Database for data persistance 
 * GraphQL server for incoming requests to the database
 * Go programming interface to stand up GraphQL requests
 * Go Tests
 * Dockerfile for building application
 
 ### **Go.mod deps** ###
-- **[mysql](github.com/go-sql-driver/mysql)** - MySQL database driver
+- **[sqlite3](https://github.com/mattn/go-sqlite3)** - sqlite3 database driver
 - **[gqlgen](https://github.com/99designs/gqlgen)** - Generates Go template code for GraphQL servers
 - **[testify](https://github.com/stretchr/testify)** - Tools for testifying that your code will behave as you intend (asserts, requires, etc..)
 - **[go-sqlmock](github.com/DATA-DOG/go-sqlmock)** - mocking database calls for testing 
@@ -28,11 +28,13 @@ Needed a fork because, from my understanding, the package in its current state w
 ### **Program structure** ###
 ```
 .
-├── auth
+── auth
 │   ├── auth.go
 │   └── auth_test.go
+├── build_and_start_server.sh
 ├── config
-│   └── config.go
+│   ├── config.go
+│   └── config_test.go
 ├── config.env
 ├── database
 │   ├── database.go
@@ -40,9 +42,9 @@ Needed a fork because, from my understanding, the package in its current state w
 ├── dnsbl
 │   ├── dnsbl.go
 │   └── dnsbl_test.go
-├── docker-compose-script.sh
 ├── docker-compose.yml
 ├── Dockerfile
+├── go-build.sh
 ├── go.mod
 ├── go.sum
 ├── gqlgen.yml
@@ -73,14 +75,17 @@ Needed a fork because, from my understanding, the package in its current state w
 ├── middleware
 │   ├── middleware.go
 │   └── middleware_test.go
+├── notes
 ├── README.md
+├── run-docker.sh
 ├── scripts
 │   └── ip
 │       ├── init.sql
 │       └── upsert.sql
+├── server
 ├── server.go
-├── start-helm.sh
-└── start_server.sh
+└── server_test.go
+
 ``` 
 The **auth**, **config**, **database**, **dnsbl**, **graph**, **middleware** folders contain all the package code for the Go code. Below are the packages main functions and additional information therefore.
 
@@ -99,7 +104,7 @@ ___
 1. `GetConfig` --> Go function that gets all the listed Environment Variables and passes them to the main app server. See [config.env](./config.env) for the configuration possibilities. *NOTE: env some variables have default values.* 
 
 ### Database
-MySQL. To get a glimpse of the overall db schema, see the [GraphQL section](#schema)
+sqlite3. To get a glimpse of the overall db schema, see the [GraphQL section](#schema)
 ___
 1. `NewDb` --> Function for creating a new database instance
 2. `UpsertRecord` --> takes in a struct from the generated GraphQL model and inserts if the record doesn't exist, otherwise, the record is updated
@@ -135,19 +140,23 @@ Logging to a file is set to an environment variable in the `config.env` file.
 
 ## Local Development
 ### <a id="database"></a>Development with a local database
-As mentioned, the chosen database was MySql. In order to do development with a local MySql instance, a few things need to be configured. The API uses a connection string with a username, password, host name, host port (default: 3306), and database name all from the `config.env` file. 
 
 #### Defaults from the config.env file
-- username: `mysql_admin` <br/>
-- password: `password` <br/>
 - host_name: `localhost` || `db` *(if running in docker-compose; reference to the `db` container)* <br/>
-- host_port: `3306` <br/>
+- db_path: `./swdnsbl.db`
+- persist data: `true` <br/>
 - database_name: `sw_dnsbl`
 
-1. Configure DB with appropriate username and password
-2. Create database in accoridance with `config.env`
-1. Run the [init.sql](scripts/ip/init.sql) script to create the table.
-2. This script sets the environment variables from the `config.env` file and starts running the server locally ```./start_local_server.sh```
+Run locally
+```sh
+> ./build_and_start_server.sh
+```
+
+## Testing
+To test all packages and main server run 
+```sh
+go test ./...
+```
 
 ## Docker
 This package can be run locally with the following supplied script:

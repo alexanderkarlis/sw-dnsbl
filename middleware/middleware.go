@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strings"
 
@@ -53,6 +52,5 @@ func Middleware() func(http.Handler) http.Handler {
 // GetTokenFromContext func gets the token from the context after successful login through auth mutation
 func GetTokenFromContext(ctx context.Context) string {
 	tokenString, _ := ctx.Value(contextTokenKey).(string)
-	log.Println("GetTokenFromContext", tokenString)
 	return tokenString
 }

@@ -3,17 +3,17 @@ package config
 import (
 	"log"
 	"os"
-	"strings"
-
 	"strconv"
+	"strings"
 )
 
 // APIConfig is the overtall config read from env vars
 type APIConfig struct {
-	AppPort, DbHost, DbPort, DbName string
+	AppPort, DbPath, DbPort, DbName string
 	DbUser, DbPassword, LogFile     string
 	WorkerPoolsize                  int
 	DNSBlockList                    []string
+	PersistDb                       bool
 }
 
 // GetConfig function gets the configuration for the app and sets
@@ -34,16 +34,24 @@ func GetConfig() *APIConfig {
 		dnsList = []string{"zen.spamhaus.org"}
 	}
 
+	persistDb := os.Getenv("PERSIST_DB")
+	persistDbBool, err := strconv.ParseBool(persistDb)
+	if err != nil {
+		log.Println("Could not convert PERSIST_DB to a `bool`. Defaulting to `true`.")
+		persistDbBool = true
+	}
+
 	config.AppPort = os.Getenv("APP_PORT")
 	config.DbName = os.Getenv("MYSQL_DATABASE_NAME")
-	config.DbHost = os.Getenv("MYSQL_DATABASE_HOST")
+	config.DbPath = os.Getenv("DB_PATH")
 	config.DbPort = os.Getenv("MYSQL_DATABASE_PORT")
 	config.DbUser = os.Getenv("MYSQL_USER")
 	config.DbPassword = os.Getenv("MYSQL_PASSWORD")
-	config.DNSBlockList = dnsList
 	config.LogFile = os.Getenv("LOG_FILE")
+	config.PersistDb = persistDbBool
+	config.DNSBlockList = dnsList
 	config.WorkerPoolsize = workersize
 
-	log.Printf("%+v\n", config)
+	log.Printf("CONFIG SETTINGS: %+v\n", config)
 	return &config
 }

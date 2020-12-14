@@ -1,9 +1,7 @@
-DROP TABLE IF EXISTS `ip_details`;
-CREATE TABLE `ip_details` (
-  `uuid` varchar(255) DEFAULT NULL,
-  `created_at` varchar(255) DEFAULT NULL,
-  `updated_at` varchar(255) DEFAULT NULL,
-  `ip_address` varchar(255) DEFAULT NULL,
-  `response_code` varchar(255) DEFAULT NULL,
-  UNIQUE KEY `ip_address` (`ip_address`)
-) 
+CREATE TABLE IF NOT EXISTS ip_details (
+  ip_address TEXT PRIMARY KEY NOT NULL, 
+  uuid TEXT NOT NULL, 
+  response_code text,
+  created_at TEXT, 
+  updated_at TEXT
+);

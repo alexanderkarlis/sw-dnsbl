@@ -2,14 +2,15 @@ package database
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
+	"os"
 
 	"github.com/alexanderkarlis/sw-dnsbl/config"
 	"github.com/alexanderkarlis/sw-dnsbl/graph/model"
 
 	// in order to get around the go-lint; here's a comment
-	_ "github.com/go-sql-driver/mysql"
+	// _ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3" //Required for sql driver registration
 )
 
 var (
@@ -22,59 +23,120 @@ type Db struct {
 	Conn *sql.DB
 }
 
+// Exists reports whether the named file or directory exists.
+func exists(name string) bool {
+	if _, err := os.Stat(name); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
+}
+
 // NewDb method returns a new MySql instance
 func NewDb(c *config.APIConfig) (*Db, error) {
-	dbHost := c.DbHost
-	if c.DbHost == "" {
-		dbHost = "0.0.0.0"
+	dbPath := "./swdnsbl.db"
+
+	if c.DbPath != "" {
+		dbPath = c.DbPath
 	}
-	log.Println(dbHost)
-	connString := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s", c.DbUser, c.DbPassword, dbHost, c.DbName)
-	db, err = sql.Open("mysql", connString)
+	log.Println(dbPath)
+	if !c.PersistDb {
+		os.Remove(dbPath)
+	}
+
+	db, err = sql.Open("sqlite3", dbPath)
+
 	if err != nil {
 		return nil, err
 	}
-	log.Println("starting db connection...")
+
+	// read create table script sql
+	// content, err := ioutil.ReadFile("../scripts/ip/init.sql")
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	if !exists(dbPath) {
+		createTable := `
+			CREATE TABLE IF NOT EXISTS ip_details (
+				ip_address TEXT PRIMARY KEY NOT NULL, 
+				uuid TEXT NOT NULL, 
+				response_code text,
+				created_at TEXT, 
+				updated_at TEXT
+			);
+		`
+		_, err = db.Exec(createTable)
+		if err != nil {
+			log.Println(err)
+			log.Fatalf("create table sql statement FAILED: %s\n", createTable)
+		}
+	}
+
+	log.Println("db connection started...")
 
 	return &Db{db}, nil
 }
 
 // UpsertRecord func inserts if not exists, else update record
 func (db *Db) UpsertRecord(r *model.Record) error {
-	tx, err := db.Conn.Begin()
-	defer tx.Commit()
-
 	if err != nil {
 		log.Println("this is the error:", err)
 		return err
 	}
 
 	log.Printf("%+v\n", r)
+	// upsertQuery := `
+	// INSERT INTO ip_details(uuid, created_at, updated_at, ip_address, response_code)
+	// VALUES (
+	// 	?,
+	// 	?,
+	// 	?,
+	// 	?,
+	// 	?
+	// ) ON DUPLICATE KEY
+	// UPDATE response_code = ?,
+	// 	updated_at = ?;
+	// `
+
 	upsertQuery := `
-	INSERT INTO ip_details(uuid, created_at, updated_at, ip_address, response_code)
-	VALUES (
-		?,
-		?,
-		?,
-		?,
-		?
-	) ON DUPLICATE KEY
-	UPDATE response_code = ?,
-		updated_at = ?;
+		INSERT INTO ip_details( 
+			ip_address,
+			uuid,
+			response_code,
+			created_at,
+			updated_at 
+		) VALUES( ?, ?, ?, ?, ? )
+		ON CONFLICT(ip_address) DO UPDATE SET
+			response_code = ?,
+			updated_at = ?
 	`
-	// upsertStmt, err := db.Conn.Prepare(upsertQuery)
-	upsertStmt, err := tx.Prepare(upsertQuery)
+
+	upsertStmt, err := db.Conn.Prepare(upsertQuery)
+
 	if err != nil {
+		log.Println(err)
 		log.Println("error on upsert preparation")
 		return err
 	}
-	upsertResult, err := upsertStmt.Exec(r.UUID, r.CreatedAt, r.UpdatedAt, r.IPAddress, r.ResponseCode, r.ResponseCode, r.UpdatedAt)
+	upsertResult, err := upsertStmt.Exec(
+		r.IPAddress,
+		r.UUID,
+		r.ResponseCode,
+		r.CreatedAt,
+		r.UpdatedAt,
+		r.ResponseCode,
+		r.UpdatedAt,
+	)
 	if err != nil {
+		log.Println(err)
 		log.Println("error on upsert")
 		return err
 	}
 	rowsAffected, err := upsertResult.RowsAffected()
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	if rowsAffected == 2 {
@@ -87,36 +149,53 @@ func (db *Db) UpsertRecord(r *model.Record) error {
 
 // QueryRecord func searches for a record
 func (db *Db) QueryRecord(ip string) (*model.Record, error) {
-	// NOTE: can not figure out how to add custom struct tags so that
-	// db records can be more easily unmarshalled
-	r := &model.Record{}
+	// TODO: add custom struct tags so that for easy unmarshalling
 
-	tx, err := db.Conn.Begin()
-	defer tx.Commit()
-	if err != nil {
-		return r, err
-	}
+	var r model.Record
 
 	selectQuery := `
-		SELECT * 
+		SELECT
+			ip_address,
+			uuid,
+			created_at,
+			updated_at,
+			response_code
 		FROM ip_details
 		WHERE ip_address = ?
 	`
-	err = tx.QueryRow(selectQuery, ip).Scan(
+	// selectQuery := `
+	// 	select * from ip_details
+	// 	where ip_address = ?;
+	// `
+	selectStmt, err := db.Conn.Prepare(selectQuery)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	defer selectStmt.Close()
+
+	// _, err = selectStmt.Exec(ip)
+	// if err != nil {
+	// 	log.Println("here", err)
+	// 	return nil, err
+	// }
+
+	err = db.Conn.QueryRow(selectQuery, ip).Scan(
+		&r.IPAddress,
 		&r.UUID,
 		&r.CreatedAt,
 		&r.UpdatedAt,
-		&r.IPAddress,
 		&r.ResponseCode,
 	)
+
 	if err != nil {
-		log.Println(err)
-		return r, err
+		log.Println("Query Row Error", err)
+		return nil, err
 	}
-	return r, nil
+	return &r, nil
 }
 
-// Close the connection to MySql
-func (db *Db) Close() {
-	db.Conn.Close()
+// Close the connection to Sqlite3
+func (db *Db) Close() error {
+	return db.Conn.Close()
 }

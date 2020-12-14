@@ -9,6 +9,8 @@ RUN . ./config.env
 RUN chmod a+x build_and_start_server.sh
 
 ENV HOST=0.0.0.0
+
+# docker-compose wait function for go tests
 ENV WAIT_VERSION 2.7.2
 ADD https://github.com/ufoscout/docker-compose-wait/releases/download/$WAIT_VERSION/wait /wait
 RUN chmod +x /wait

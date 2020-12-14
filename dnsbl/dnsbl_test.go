@@ -21,6 +21,7 @@ func TestConsumer(t *testing.T) {
 
 	c := config.GetConfig()
 	db, err := database.NewDb(c)
+	defer os.Remove(c.DbPath)
 
 	defer db.Close()
 	if err != nil {
