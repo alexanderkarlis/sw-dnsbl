@@ -183,3 +183,4 @@ helm install swdnsbl ./helm
 - [ ] Right now, the data model only allows for one Domain to be checked (`zen.spamhaus.org`). Update data model to reflect multiple Domains and IP checks
 - [ ] Add more specific logging
 - [ ] Add more queries/ mutations for more insight into the problem
+- [ ] Kubernetes pod is finicky, needs more work

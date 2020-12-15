@@ -35,16 +35,32 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 8080
               protocol: TCP
           livenessProbe:
+            # exec:
+            #   command:
+            #   - cat
+            #   - /usr/src/app/server/logs/app.log
             httpGet:
-              path: /alive
+              # httpHeaders:
+              # - name: Authorization
+              #   value: ""
+              path: /graphql
               port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 20
+            periodSeconds: 5
           readinessProbe:
             httpGet:
-              path: /ready
-              port: 8080 
+              # httpHeaders:
+              # - name: Authorization
+              #   value: ""
+              path: /graphql
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 20
+            periodSeconds: 5
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

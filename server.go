@@ -27,18 +27,19 @@ func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Methods", "*")
 	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	(*w).Header().Set("Content-Type", "application/json")
+	(*w).Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 }
 
 // Alive endpoint check for helm
 func Alive(w http.ResponseWriter, req *http.Request) {
 	enableCors(&w)
-	fmt.Fprintf(w, "ok")
+	fmt.Fprintf(w, "{\"status\":\"ok\"}")
 }
 
 // Ready endpoint check for helm
 func Ready(w http.ResponseWriter, req *http.Request) {
 	enableCors(&w)
-	fmt.Fprintf(w, "ok")
+	fmt.Fprintf(w, "{\"status\":\"ok\"}")
 }
 
 func serve(ctx context.Context) (err error) {
