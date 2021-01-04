@@ -1,5 +1,6 @@
 ./tmp
 logs/**
+app.log
 server
 notes
 **/*.db

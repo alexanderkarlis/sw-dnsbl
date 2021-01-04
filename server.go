@@ -105,7 +105,10 @@ func serve(ctx context.Context) (err error) {
 
 func main() {
 	logfile := os.Getenv("LOG_FILE")
-	f, err := os.OpenFile("./logs/"+logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0664)
+	if logfile == "" {
+		logfile = "app.log"
+	}
+	f, err := os.OpenFile("./"+logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0664)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
